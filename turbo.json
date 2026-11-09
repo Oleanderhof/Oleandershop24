@@ -1,0 +1,78 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**", ".output/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env"],
+      "cache": true
+    },
+    "build:analyze": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".output/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env"],
+      "cache": true
+    },
+    "start": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": [],
+      "cache": false
+    },
+    "lint": {
+      "outputs": [],
+      "cache": false
+    },
+    "lint:fix": {
+      "outputs": []
+    },
+    "dev": {
+      "cache": false
+    },
+    "docs:dev": {
+      "cache": false
+    },
+    "docs:build": {
+      "outputs": ["docs/.vitepress/dist/**"]
+    },
+    "docs:preview": {
+      "cache": false
+    },
+    "publish-typedoc": {
+      "cache": false,
+      "outputs": []
+    },
+    "test": {
+      "outputs": []
+    },
+    "test:coverage": {
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
+      "cache": false
+    },
+    "test:cypress-dev": {
+      "cache": false
+    },
+    "test:cypress": {
+      "cache": false
+    },
+    "test:cypress-smoke-shop": {
+      "cache": false
+    },
+    "test:cypress-smoke-editor": {
+      "cache": false
+    },
+    "test:cypress-quarantine": {
+      "cache": false
+    },
+    "test:cypress-post-quarantine": {
+      "cache": false
+    },
+    "generate": {
+      "cache": false,
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,62 @@
+export type ImageProps = {
+  name: string;
+  type: string;
+  content: ImageContent;
+  configuration?: object;
+  index?: number;
+  meta: {
+    uuid: string;
+  };
+};
+
+export type ImageContent = {
+  index?: number;
+  image: {
+    wideScreen?: string;
+    desktop?: string;
+    tablet?: string;
+    mobile?: string;
+    alt: string;
+    linktarget?: string;
+    imageAlignment: 'left' | 'right';
+    brightness?: number;
+    fillMode?: 'fill' | 'fit';
+    aspectRatio?: string;
+  };
+  text: {
+    textOverlay?: string;
+    textOverlayColor?: string;
+    textOverlayAlignY?: 'top' | 'center' | 'bottom';
+    textOverlayAlignX?: 'left' | 'center' | 'right';
+  };
+  button: {
+    label?: string;
+    link?: string;
+    variant?: 'primary' | 'secondary';
+    alignment?: 'left' | 'center' | 'right';
+  };
+  layout: {
+    paddingTop: number;
+    paddingBottom: number;
+    paddingLeft: number;
+    paddingRight: number;
+    backgroundColor?: string;
+    fullWidth?: boolean;
+  };
+};
+
+export interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+export type BreakpointEntry = { aspectRatio: string; url: string | undefined; dimensions: ImageDimensions };
+
+export interface ImageFormProps {
+  uuid?: string;
+}
+export type ImageTypeKey = 'wideScreen' | 'desktop' | 'tablet' | 'mobile';
+export type FillMode = 'fill' | 'fit';
+export type AlignX = 'left' | 'center' | 'right';
+export type AlignY = 'top' | 'center' | 'bottom';
+export type ButtonVariant = 'primary' | 'secondary';

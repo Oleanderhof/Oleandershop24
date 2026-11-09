@@ -1,0 +1,169 @@
+/**
+ * Tests for BaseGenerator factory pattern
+ */
+
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { BaseGenerator } from '../index';
+import type { GeneratorAction, PromptAnswers, GeneratorPrompt } from '../types';
+import { PathResolver } from '../../path/PathResolver';
+
+let pathResolver: PathResolver;
+
+beforeAll(() => {
+  pathResolver = new PathResolver();
+});
+
+class TestGenerator extends BaseGenerator {
+  readonly name = 'test';
+  readonly description = 'Test generator for BaseGenerator pattern';
+
+  getPrompts(): GeneratorPrompt[] {
+    return [
+      {
+        type: 'input',
+        name: 'name',
+        message: 'What is the name?',
+        validate: (input: string) => (input.length > 0 ? true : 'Name is required'),
+      },
+    ];
+  }
+
+  validateInput(data: PromptAnswers): string | true {
+    if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
+      return 'Name is required and must be a non-empty string';
+    }
+    return true;
+  }
+
+  createActions(data: PromptAnswers): GeneratorAction[] {
+    return [
+      {
+        type: 'add',
+        path: `test/${data.name}.txt`,
+        templateFile: 'test.txt.hbs',
+        data,
+      },
+    ];
+  }
+}
+
+describe('BaseGenerator', () => {
+  it('should create a generator with correct properties', () => {
+    const generator = new TestGenerator(pathResolver);
+
+    expect(generator.name).toBe('test');
+    expect(generator.description).toBe('Test generator for BaseGenerator pattern');
+  });
+
+  it('should return prompts correctly', () => {
+    const generator = new TestGenerator(pathResolver);
+    const prompts = generator.getPrompts();
+
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0].name).toBe('name');
+    expect(prompts[0].type).toBe('input');
+  });
+
+  it('should create actions correctly', () => {
+    const generator = new TestGenerator(pathResolver);
+    const data: PromptAnswers = { name: 'TestComponent' };
+    const actions = generator.createActions(data);
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('add');
+    expect(actions[0].path).toBe('test/TestComponent.txt');
+  });
+
+  it('should verify generator registration', () => {
+    const generator = new TestGenerator(pathResolver);
+    const mockPlop = {
+      setGenerator: vi.fn(),
+    };
+
+    generator.register(mockPlop as unknown as Parameters<typeof generator.register>[0]);
+
+    expect(mockPlop.setGenerator).toHaveBeenCalledWith('test', expect.any(Object));
+
+    const registeredConfig = mockPlop.setGenerator.mock.calls[0][1];
+    expect(registeredConfig.description).toBe('Test generator for BaseGenerator pattern');
+    expect(Array.isArray(registeredConfig.prompts)).toBe(true);
+    expect(registeredConfig.prompts).toHaveLength(1);
+    expect(typeof registeredConfig.actions).toBe('function');
+  });
+
+  it('should handle data validation with error handling', () => {
+    const generator = new TestGenerator(pathResolver);
+    const mockPlop = {
+      setGenerator: vi.fn(),
+    };
+
+    generator.register(mockPlop as unknown as Parameters<typeof generator.register>[0]);
+
+    const registeredConfig = mockPlop.setGenerator.mock.calls[0][1];
+    const actionsFunction = registeredConfig.actions;
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => actionsFunction(undefined)).toThrow();
+
+    consoleErrorSpy.mockRestore();
+
+    const validData = { name: 'TestComponent' };
+    const actions = actionsFunction(validData);
+    expect(actions).toHaveLength(1);
+    expect(actions[0].path).toBe('test/TestComponent.txt');
+  });
+
+  it('should throw instead of silently returning an empty array on missing data', () => {
+    const generator = new TestGenerator(pathResolver);
+    const mockPlop = {
+      setGenerator: vi.fn(),
+    };
+
+    generator.register(mockPlop as unknown as Parameters<typeof generator.register>[0]);
+
+    const registeredConfig = mockPlop.setGenerator.mock.calls[0][1];
+    const actionsFunction = registeredConfig.actions;
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => actionsFunction(undefined)).toThrow(/invalid or missing input data/);
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('should throw instead of silently returning an empty array when createActions() throws', () => {
+    class ThrowingGenerator extends BaseGenerator {
+      readonly name = 'throwing';
+      readonly description = 'Generator that always fails while building actions';
+
+      getPrompts(): GeneratorPrompt[] {
+        return [];
+      }
+
+      validateInput(): string | true {
+        return true;
+      }
+
+      createActions(): GeneratorAction[] {
+        throw new Error('boom: template rendering failed');
+      }
+    }
+
+    const generator = new ThrowingGenerator(pathResolver);
+    const mockPlop = {
+      setGenerator: vi.fn(),
+    };
+
+    generator.register(mockPlop as unknown as Parameters<typeof generator.register>[0]);
+
+    const registeredConfig = mockPlop.setGenerator.mock.calls[0][1];
+    const actionsFunction = registeredConfig.actions;
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => actionsFunction({ name: 'TestComponent' })).toThrow(/boom: template rendering failed/);
+
+    consoleErrorSpy.mockRestore();
+  });
+});

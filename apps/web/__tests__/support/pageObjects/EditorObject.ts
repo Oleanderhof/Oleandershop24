@@ -1,0 +1,415 @@
+import { PageObject } from './PageObject';
+
+export class EditorObject extends PageObject {
+  get description() {
+    return cy.get('[data-testid^="text-html"]').first();
+  }
+
+  get editorToolbar() {
+    return cy.getByTestId('edit-mode-toolbar');
+  }
+
+  get editPreviewButton() {
+    return cy.getByTestId('edit-preview-button');
+  }
+
+  get editBlockActions() {
+    return cy.getByTestId('edit-block-actions');
+  }
+
+  get multiGridEditButton() {
+    return cy.getByTestId('MultiGrid-open-editor-button');
+  }
+
+  get openEditorButton() {
+    return cy.getByTestId('open-editor-button');
+  }
+
+  get editorTextarea() {
+    return cy.getByTestId('editor-textarea');
+  }
+
+  get exitEditorButton() {
+    return cy.getByTestId('close-editor-button');
+  }
+
+  get blockWrappers() {
+    return cy.get('[data-testid*="block-wrapper"]');
+  }
+
+  get contentBlockWrappers() {
+    return cy.get('[data-testid*="block-wrapper"]').not('.header-blocks [data-testid*="block-wrapper"]');
+  }
+
+  get addBlockPopover() {
+    return cy.getByTestId('add-block-popover');
+  }
+
+  get addLayoutPresetButton() {
+    return cy.getByTestId('block-add-layout-preset-2-equal');
+  }
+
+  get topBlockButton() {
+    return cy.getByTestId('top-add-block');
+  }
+
+  get bottomBlockButton() {
+    return cy.getByTestId('bottom-add-block');
+  }
+
+  get inlineBlockButton() {
+    return cy.getByTestId('inactive-empty-multicolumn');
+  }
+
+  get deleteFormBlockButton() {
+    return cy.getByTestId('delete-form-block-button');
+  }
+
+  get deleteBlockButton() {
+    return cy.getByTestId('delete-block-button');
+  }
+
+  get topMoveBlockButton() {
+    return cy.getByTestId('move-up-button');
+  }
+
+  get bottomMoveBlockButton() {
+    return cy.getByTestId('move-down-button');
+  }
+
+  get recommendedProducts() {
+    return cy.getByTestId('product-slider');
+  }
+
+  get languageSwitcher() {
+    return cy.getByTestId('editor-language-select');
+  }
+
+  get languageList() {
+    return cy.getByTestId('editor-language-list');
+  }
+
+  get languageOptionGerman() {
+    return cy.getByTestId('language-option-de');
+  }
+
+  get multiGridColumns() {
+    return cy.getByTestId('multi-grid-column');
+  }
+
+  get addImageBlockButton() {
+    return cy.getByTestId('block-add-image-0');
+  }
+
+  get designSettingsButton() {
+    return cy.getByTestId('open-design-drawer');
+  }
+
+  get itemSettingsButton() {
+    return cy.getByTestId('open-item-settings-drawer');
+  }
+
+  get categorySettingsButton() {
+    return cy.getByTestId('open-category-drawer');
+  }
+
+  get generalSettingsButton() {
+    return cy.getByTestId('open-general-settings-drawer');
+  }
+
+  get seoSettingsButton() {
+    return cy.getByTestId('open-seo-settings-drawer');
+  }
+
+  blockIsBanner(el: JQuery<HTMLElement>) {
+    return el[0]?.innerHTML.includes('banner-image');
+  }
+
+  isMultiGrid(el: JQuery<HTMLElement>) {
+    return el[0]?.innerHTML.includes('multi-grid-structure');
+  }
+
+  isInnerBlock(el: JQuery<HTMLElement>) {
+    return el[0]?.innerHTML.includes('multi-grid-structure');
+  }
+
+  blockIsNewsletter(el: JQuery<HTMLElement>) {
+    return el[0]?.innerHTML.includes('newsletter-block');
+  }
+
+  blockIsFooter(el: HTMLElement) {
+    return el.innerHTML.includes('footer');
+  }
+
+  togglePreviewMode() {
+    this.editPreviewButton.should('be.enabled').click();
+    this.editPreviewButton.should('contain.text', 'Preview');
+    return this;
+  }
+  toggleEditMode() {
+    this.editPreviewButton.should('be.enabled').click();
+    this.editPreviewButton.should('contain.text', 'Edit');
+    return this;
+  }
+
+  toggleDesignSettings() {
+    this.designSettingsButton.should('be.visible').click();
+    return this;
+  }
+
+  toggleItemSettings() {
+    this.itemSettingsButton.should('be.visible').click();
+    return this;
+  }
+
+  toggleCategorySettings() {
+    this.categorySettingsButton
+      .should('be.visible')
+      .click()
+      .trigger('mouseout', { force: true })
+      .trigger('mouseleave', { force: true });
+    return this;
+  }
+
+  toggleSeoSettings() {
+    this.seoSettingsButton.should('be.visible').click();
+    return this;
+  }
+
+  toggleGeneralSettings() {
+    this.generalSettingsButton
+      .should('be.visible')
+      .click()
+      .trigger('mouseout', { force: true })
+      .trigger('mouseleave', { force: true });
+    return this;
+  }
+
+  isToolbarVisible() {
+    this.editorToolbar.should('be.visible');
+  }
+
+  assertEditBlockActionsNotVisible() {
+    this.editBlockActions.should('not.be.visible');
+    return this;
+  }
+
+  openEditor() {
+    this.openEditorButton.click();
+    return this;
+  }
+
+  clearAndTypeInEditor(content: string) {
+    this.editorTextarea.clear().type(content, { parseSpecialCharSequences: false });
+    return this;
+  }
+
+  assertEditorContent(content: string) {
+    this.editorTextarea.should('have.value', content);
+    return this;
+  }
+
+  checkEditorContent() {
+    this.openEditorButton.first().click({ force: true });
+
+    cy.get('body', { timeout: 30000 })
+      .find('[data-testid="editor-textarea"]')
+      .should('exist')
+      .and('be.visible')
+      .invoke('attr', 'placeholder')
+      .should('not.be.empty');
+  }
+
+  replaceEditorContent(content: string) {
+    this.editorTextarea
+      .should('be.visible')
+      .then(($el) => {
+        if ($el.prop('isContentEditable')) {
+          cy.wrap($el).invoke('text', '');
+        } else {
+          cy.wrap($el).clear();
+        }
+      })
+      .type(content, { delay: 0 })
+      .should('have.value', content);
+  }
+
+  checkEditorChanges() {
+    this.exitEditorButton.get('#close').click({ force: true });
+    this.description.should('have.text', 'Description from cypress.');
+  }
+
+  buttonsExistWithGroupClasses() {
+    this.contentBlockWrappers
+      .first()
+      .should('exist')
+      .and('have.class', 'group')
+      .and('not.have.css', 'outline-style', 'solid');
+    this.contentBlockWrappers.first().within(() => {
+      this.topBlockButton
+        .should('exist')
+        .and('have.class', 'group-hover/block:opacity-100')
+        .and('have.class', 'focus-visible:opacity-100');
+      this.bottomBlockButton.should('exist').and('have.class', 'group-hover/block:opacity-100');
+      this.editBlockActions.should('exist').and('have.class', 'group-hover/block:opacity-100');
+    });
+  }
+
+  deleteBlock() {
+    this.contentBlockWrappers.then((initialBlocks) => {
+      const initialLength = initialBlocks.length;
+      this.contentBlockWrappers.first().should('exist');
+      this.contentBlockWrappers.first().find('[data-testid="delete-block-button"]').click();
+      cy.wait(1000);
+      this.contentBlockWrappers.should('have.length', initialLength - 1);
+    });
+  }
+
+  recommendedProductsExist() {
+    cy.getByTestId('recommended-block').first().scrollIntoView();
+    cy.getByTestId('recommended-block').first().should('exist');
+    cy.wait(2000);
+
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-testid="product-slider"]').length > 0) {
+        cy.getByTestId('product-slider').should('exist');
+      } else {
+        cy.getByTestId('recommended-block').first().should('be.visible');
+        cy.log('Product slider not present - likely no products available in test environment');
+      }
+    });
+  }
+
+  switchLanguage() {
+    cy.intercept('/plentysystems/getBlocksWithGlobalBlocks').as('getBlocks');
+    cy.intercept('/plentysystems/getCategoryTree').as('getCategoryTree');
+    cy.intercept('/plentysystems/getSession').as('getSession');
+
+    this.editPreviewButton.click();
+    this.languageSwitcher.should('be.visible').click();
+    this.languageList.should('be.visible');
+    this.languageList.children().should('have.length', 2);
+    this.languageOptionGerman.should('be.visible').click();
+    cy.wait(['@getSession', '@getCategoryTree', '@getBlocks']);
+    this.description.should('contain.text', 'Ihr Sound');
+  }
+
+  addBlockTop() {
+    this.contentBlockWrappers.then((initialBlocks) => {
+      const initialLength = initialBlocks.length;
+      this.contentBlockWrappers.first().find('[data-testid="top-add-block"]').invoke('removeClass', 'opacity-0');
+      this.contentBlockWrappers.first().find('[data-testid="top-add-block"]').should('exist').click();
+      this.addBlockPopover.should('be.visible');
+      this.addImageBlockButton.first().should('exist').click({ force: true });
+      cy.wait(1000);
+      this.contentBlockWrappers.should('have.length', initialLength + 1);
+    });
+  }
+
+  addBlockBottom() {
+    this.contentBlockWrappers.then((initialBlocks) => {
+      const initialLength = initialBlocks.length;
+      this.contentBlockWrappers.first().find('[data-testid="bottom-add-block"]').invoke('removeClass', 'opacity-0');
+      this.contentBlockWrappers.first().find('[data-testid="bottom-add-block"]').should('exist').click();
+      this.addBlockPopover.should('be.visible');
+      this.addImageBlockButton.click({ force: true });
+      cy.wait(1000);
+      this.contentBlockWrappers.should('have.length', initialLength + 1);
+    });
+  }
+
+  checkFirstBlock() {
+    this.contentBlockWrappers.first().within(() => {
+      this.topMoveBlockButton
+        .first()
+        .should('exist')
+        .and('be.disabled')
+        .and('have.class', 'disabled:cursor-not-allowed');
+    });
+  }
+
+  checkLastNonFooterBlock() {
+    this.blockWrappers.then(($blocks) => {
+      let lastNonFooterIndex = -1;
+      $blocks.each((i, el) => {
+        if (!this.blockIsFooter(el)) {
+          lastNonFooterIndex = i;
+        }
+      });
+      cy.wrap($blocks[lastNonFooterIndex]).within(() => {
+        this.bottomMoveBlockButton
+          .first()
+          .should('exist')
+          .and('be.disabled')
+          .and('have.class', 'disabled:cursor-not-allowed');
+      });
+    });
+  }
+
+  checkFooterBlock() {
+    this.blockWrappers.last().within(() => {
+      this.topMoveBlockButton.should('not.exist');
+      this.bottomMoveBlockButton.should('not.exist');
+      this.deleteBlockButton.should('not.exist');
+    });
+  }
+
+  assertDefaultBlockOrder() {
+    this.contentBlockWrappers.then(($blocks) => {
+      cy.wrap($blocks.eq(0)).should('contain.text', 'Feel the music');
+      cy.wrap($blocks.eq(1)).should('contain.text', 'Discover Tech');
+    });
+  }
+
+  moveBlock() {
+    this.contentBlockWrappers.first().within(() => {
+      this.bottomMoveBlockButton.first().should('exist').click();
+    });
+  }
+
+  assertChangedBlockOrder() {
+    this.contentBlockWrappers.then(($blocks) => {
+      cy.wrap($blocks.eq(0)).should('contain.text', 'Discover Tech');
+      cy.wrap($blocks.eq(1)).should('contain.text', 'Feel the music');
+    });
+  }
+
+  checkWrapperSpacings() {
+    this.contentBlockWrappers.each((el) => {
+      if (this.blockIsBanner(el) || this.isMultiGrid(el) || this.isInnerBlock(el) || this.blockIsFooter(el.get(0))) {
+        cy.wrap(el).should('not.have.class', 'p-4');
+      } else {
+        cy.wrap(el).should('have.class', 'p-4');
+      }
+    });
+  }
+
+  addMultiGridTop() {
+    this.contentBlockWrappers.first().find('[data-testid="top-add-block"]').should('exist').click();
+    this.addBlockPopover.should('be.visible');
+    this.addLayoutPresetButton.should('exist').click({ force: true });
+    cy.wait(1000);
+  }
+
+  addBlockInGridColumn(column: number) {
+    this.inlineBlockButton.eq(column).should('exist').click();
+    this.addBlockPopover.should('be.visible');
+    this.addImageBlockButton.click({ force: true });
+    cy.wait(1000);
+  }
+
+  closeEditor() {
+    this.exitEditorButton.should('exist').click();
+  }
+
+  deleteBlockInGridColumn(column: number) {
+    this.multiGridEditButton.first().should('exist').click({ force: true });
+    cy.wait(1000);
+    cy.get(`[data-testid="actions-edit-item-${column}"]`).should('exist').click({ force: true });
+    cy.wait(1000);
+    this.deleteFormBlockButton.should('exist').click();
+    cy.wait(1000);
+    this.inlineBlockButton.eq(column).should('exist');
+    this.inlineBlockButton.should('have.length', 2);
+  }
+}

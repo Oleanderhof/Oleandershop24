@@ -1,0 +1,254 @@
+<template>
+  <NuxtErrorBoundary>
+    <Swiper
+      :id="`carousel-${meta.uuid}`"
+      :key="visibleContent.length"
+      :modules="enableModules ? [Pagination, Navigation] : []"
+      :slides-per-view="1"
+      v-bind="carouselProps"
+      :aria-roledescription="t('homepage.banner.ariaRoleDescriptionCarousel')"
+      :aria-label="t('homepage.banner.ariaRoleDescriptionCarousel')"
+      :loop="true"
+      :pagination="paginationConfig"
+      :navigation="navigationConfig"
+      class="!w-full !max-h-[85vh]"
+      @swiper="onSwiperInit"
+      @slide-change="onSlideChange"
+    >
+      <SwiperSlide
+        v-for="(block, slideIndex) in visibleContent"
+        :key="slideIndex"
+        :aria-labelledby="visibleContent.length > 1 ? `carousel_item-${slideIndex}_heading` : null"
+        :aria-label="
+          visibleContent.length > 1
+            ? t('homepage.banner.ariaLabelSlidePosition', { current: slideIndex + 1, total: visibleContent.length })
+            : null
+        "
+        class="!h-auto"
+        v-bind="carouselProps"
+        :aria-roledescription="t('homepage.banner.ariaRoleDescriptionSlide')"
+      >
+        <slot
+          name="content"
+          :content-block="block"
+          :index="getSlideAdjustedIndex(slideIndex)"
+          :slide-index="slideIndex"
+          :lazy-loading="slideIndex > 0 ? 'lazy' : 'eager'"
+        />
+      </SwiperSlide>
+      <div
+        v-if="enableModules"
+        :class="`swiper-pagination swiper-pagination-${meta.uuid} swiper-pagination-bullets swiper-pagination-horizontal`"
+      />
+    </Swiper>
+
+    <button
+      v-if="enableModules && handleArrows()"
+      :key="`prev-${meta.uuid}`"
+      type="button"
+      :class="`swiper-button-prev swiper-button-prev-${meta.uuid}`"
+      :aria-controls="`carousel-${meta.uuid}`"
+      :aria-label="t('homepage.banner.ariaLabelPreviousSlide')"
+      :style="{
+        color: configuration.controls.color + ' !important',
+        '--swiper-navigation-size': navigationSize,
+        visibility: swiperHeight === 0 ? 'hidden' : 'visible',
+      }"
+    />
+    <button
+      v-if="enableModules && handleArrows()"
+      :key="`next-${meta.uuid}`"
+      type="button"
+      :class="`swiper-button-next swiper-button-next-${meta.uuid}`"
+      :aria-controls="`carousel-${meta.uuid}`"
+      :aria-label="t('homepage.banner.ariaLabelNextSlide')"
+      :style="{
+        color: configuration.controls.color + ' !important',
+        '--swiper-navigation-size': navigationSize,
+        visibility: swiperHeight === 0 ? 'hidden' : 'visible',
+      }"
+    />
+  </NuxtErrorBoundary>
+</template>
+
+<script setup lang="ts">
+import { Swiper, SwiperSlide } from 'swiper/vue';
+import { Pagination, Navigation } from 'swiper/modules';
+import type { CarouselStructureProps, SlideBlock } from './types';
+import type { Swiper as SwiperType } from 'swiper';
+
+const { activeSlideIndex, setIndex } = useCarousel();
+const { content, index, configuration, meta } = defineProps<CarouselStructureProps>();
+const isInternalChange = ref(false);
+
+const swiperHeight = ref(0);
+let resizeObserver: ResizeObserver | null = null;
+
+const navigationSize = computed(() => {
+  const size = Math.min(swiperHeight.value * 0.1, 44);
+  return `${Math.max(size, 20)}px`;
+});
+
+const visibleContent = computed(() => {
+  return (content as SlideBlock[]).filter((slide) => slide.configuration?.visible !== false);
+});
+
+const getActualIndex = (visibleIndex: number): number => {
+  const contentArray = content as SlideBlock[];
+  let visibleCount = 0;
+  for (let i = 0; i < contentArray.length; i++) {
+    const slide = contentArray[i];
+    if (slide && slide.configuration?.visible !== false) {
+      if (visibleCount === visibleIndex) {
+        return i;
+      }
+      visibleCount++;
+    }
+  }
+  return visibleIndex;
+};
+
+const getVisibleIndex = (actualIndex: number): number => {
+  const contentArray = content as SlideBlock[];
+  let visibleIndex = 0;
+  for (let i = 0; i < actualIndex && i < contentArray.length; i++) {
+    const slide = contentArray[i];
+    if (slide && slide.configuration?.visible !== false) {
+      visibleIndex++;
+    }
+  }
+  return visibleIndex;
+};
+
+const handleArrows = () => {
+  const viewport = useViewport();
+  return !viewport.isLessThan('md');
+};
+
+const enableModules = computed(() => visibleContent.value.length > 1);
+let slider: SwiperType | null = null;
+
+const paginationConfig = computed(() => {
+  return enableModules.value && configuration.controls.color && configuration.controls.displayIndicators !== false
+    ? {
+        el: `.swiper-pagination-${meta.uuid}`,
+        clickable: true,
+        bulletActiveClass: 'swiper-pagination-bullet-active !bg-primary-500',
+        renderBullet(index: number, className: string) {
+          return `<span key="dot-${index}" class="${className}" style="background-color: ${configuration.controls.color}!important;"></span>`;
+        },
+      }
+    : false;
+});
+
+const navigationConfig = computed(() => {
+  return enableModules.value
+    ? {
+        nextEl: `.swiper-button-next-${meta.uuid}`,
+        prevEl: `.swiper-button-prev-${meta.uuid}`,
+        addIcons: false,
+      }
+    : false;
+});
+
+const carouselProps = computed(() => {
+  return content.length > 1 ? { role: 'group' } : {};
+});
+
+const onSwiperInit = async (swiper: SwiperType) => {
+  slider = swiper;
+
+  if (activeSlideIndex.value[meta.uuid] === null) {
+    setIndex(meta.uuid, swiper.realIndex);
+  }
+
+  const el = swiper.el as HTMLElement;
+  resizeObserver?.disconnect();
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (entry) swiperHeight.value = entry.contentRect.height;
+  });
+  resizeObserver.observe(el);
+};
+
+onUnmounted(() => resizeObserver?.disconnect());
+
+const reinitializeSwiper = async () => {
+  if (!slider || slider.destroyed) return;
+
+  await nextTick();
+
+  slider.update();
+
+  if (slider.params.navigation && slider.navigation) {
+    slider.navigation.destroy();
+    slider.navigation.init();
+    slider.navigation.update();
+  }
+
+  if (slider.params.pagination && slider.pagination) {
+    slider.pagination.destroy();
+    slider.pagination.init();
+    slider.pagination.update();
+  }
+};
+const onSlideChange = async (swiper: SwiperType) => {
+  const visibleIndex = swiper.realIndex;
+  if (isInternalChange.value) {
+    isInternalChange.value = false;
+    return;
+  }
+
+  // Convert visible index to actual content index
+  const actualIndex = getActualIndex(visibleIndex);
+
+  if (actualIndex !== activeSlideIndex.value[meta.uuid]) {
+    setIndex(meta.uuid, actualIndex);
+  }
+};
+
+const getSlideAdjustedIndex = (slideIndex: number) => {
+  return activeSlideIndex.value[meta.uuid] === slideIndex ? index : index + slideIndex;
+};
+
+watch(
+  () => activeSlideIndex.value[meta.uuid],
+  (newIndex) => {
+    if (!slider || slider.destroyed) return;
+
+    // Convert actual content index to visible slide index
+    const visibleIndex = getVisibleIndex(newIndex ?? 0);
+
+    if (slider.realIndex !== visibleIndex) {
+      isInternalChange.value = true;
+      if (slider.params.loop) {
+        slider.slideToLoop(visibleIndex);
+      } else {
+        slider.slideTo(visibleIndex);
+      }
+    }
+  },
+  { flush: 'post' },
+);
+watch(
+  () => visibleContent.value.length,
+  async (newLength, oldLength) => {
+    if (oldLength <= 1 && newLength > 1) {
+      await reinitializeSwiper();
+    }
+  },
+);
+watch(
+  () => configuration.controls.color,
+  (newColor, oldColor) => {
+    if (slider && !slider.destroyed && newColor !== oldColor) {
+      slider.pagination.render();
+      slider.pagination.update();
+    }
+  },
+);
+</script>
+
+<style src="./styles/navigation.min.css"></style>
+<style src="./styles/pagination.min.css"></style>
+<style src="./styles/swiper.min.css"></style>

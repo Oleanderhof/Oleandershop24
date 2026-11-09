@@ -1,0 +1,136 @@
+<template>
+  <NuxtLayout
+    name="default"
+    :breadcrumbs="breadcrumbs"
+    class="relative"
+    :class="{ 'pointer-events-none opacity-50': loading }"
+  >
+    <SfLoaderCircular v-if="loading" class="fixed top-[50%] right-0 left-0 m-auto z-max" size="2xl" />
+    <EditableBlocks
+      :identifier="identifier"
+      :type="'category'"
+      data-testid="category-page-content"
+      :prevent-blocks-request="productsCatalog.category?.type === 'item'"
+    />
+  </NuxtLayout>
+</template>
+
+<script setup lang="ts">
+import { breadcrumbGetters, categoryGetters } from '@plentymarkets/shop-api';
+import type { Locale } from '#i18n';
+import { SfLoaderCircular } from '@storefront-ui/vue';
+
+defineI18nRoute({
+  locales: process.env.LANGUAGELIST?.split(',') as Locale[],
+});
+
+const { locale } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const { setItemListMetaData } = useStructuredData();
+const { setCategoriesPageMeta, getCategoryRobotsContent } = useUrlPageMeta();
+const { setBlocksListContext } = useBlocksList();
+const { getFacetsFromURL } = useCategoryFilter();
+const { data: productsCatalog, loading } = useProducts();
+const localePath = useLocalizedPath();
+const isItemCategoryPage = computed(() => productsCatalog.value.category?.type === 'item');
+
+const identifier = computed(() =>
+  productsCatalog.value.category?.type === 'content' ? productsCatalog.value.category?.id : 0,
+);
+
+definePageMeta({
+  layout: false,
+  middleware: ['category-guard'],
+  type: 'category',
+  isBlockified: true,
+  identifier: 0,
+  cacheControl: getCacheControl(),
+});
+
+const breadcrumbs = computed(() => {
+  const breadcrumb = breadcrumbGetters.mapFromCategoryBreadcrumbs(productsCatalog.value.breadcrumbs ?? []);
+  breadcrumb.unshift({ name: t('common.labels.home'), link: '/' });
+
+  return breadcrumb;
+});
+
+const canonicalDb = productsCatalog.value.category?.details?.[0]?.canonicalLink;
+
+const handleQueryUpdate = async () => {
+  if (!productsCatalog.value.category) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Page not found',
+    });
+  }
+};
+
+await handleQueryUpdate().then(() => {
+  setCategoriesPageMeta(productsCatalog.value, getFacetsFromURL(), canonicalDb);
+  setBlocksListContext(isItemCategoryPage.value ? 'productCategory' : 'content');
+  if (isItemCategoryPage.value) {
+    setItemListMetaData(productsCatalog.value.products || []);
+  }
+});
+
+const { setPageMeta } = usePageMeta();
+const categoryName = computed(() => categoryGetters.getCategoryName(productsCatalog.value.category));
+const icon = 'sell';
+setPageMeta(categoryName.value, icon);
+
+watch(
+  () => locale.value,
+  (changedLocale: string) => {
+    router.push({
+      path: localePath(`${productsCatalog.value.languageUrls[changedLocale]}`),
+      query: route.query,
+    });
+  },
+);
+
+const headTitle = computed(() =>
+  productsCatalog.value?.category
+    ? ((categoryGetters.getMetaTitle(productsCatalog.value.category) || process.env.METATITLE) ?? '')
+    : (process.env.METATITLE ?? ''),
+);
+
+const descriptionContent = computed(() =>
+  productsCatalog.value?.category
+    ? ((categoryGetters.getMetaDescription(productsCatalog.value.category) || process.env.METADESC) ?? '')
+    : (process.env.METADESC ?? ''),
+);
+
+const keywordsContent = computed((): string =>
+  productsCatalog.value?.category
+    ? ((categoryGetters.getMetaKeywords(productsCatalog.value.category) || process.env.METAKEYWORDS) ?? '')
+    : (process.env.METAKEYWORDS ?? ''),
+);
+
+const robotsContent = computed(() => getCategoryRobotsContent(productsCatalog));
+
+watch(
+  () => route.query,
+  async () => {
+    await handleQueryUpdate().then(() => {
+      setCategoriesPageMeta(productsCatalog.value, getFacetsFromURL());
+      if (isItemCategoryPage.value) {
+        setItemListMetaData(productsCatalog.value.products || []);
+      }
+    });
+  },
+);
+
+watchEffect(() => {
+  route.meta.identifier = productsCatalog.value.category?.type === 'content' ? productsCatalog.value.category?.id : 0;
+});
+
+useHead({
+  title: headTitle,
+  meta: [
+    { name: 'description', content: descriptionContent },
+    { name: 'keywords', content: keywordsContent },
+    { name: 'robots', content: robotsContent.value },
+  ],
+});
+</script>

@@ -1,0 +1,56 @@
+<template>
+  <div v-if="isEditMode" class="flex w-full">
+    <div
+      v-if="isActiveColumnOpen"
+      data-testid="active-empty-multicolumn"
+      class="h-[196px] flex-1 border-2 border-dashed border-sky-400 bg-sky-50 p-6 flex flex-col items-center justify-center text-center"
+    >
+      <p class="font-semibold text-gray-800">{{ getEditorTranslation('placeholder') }}</p>
+      <p class="text-sm text-gray-500">{{ getEditorTranslation('choose') }}</p>
+    </div>
+    <div
+      v-else
+      data-testid="inactive-empty-multicolumn"
+      class="h-[196px] flex-1 border-2 border-dashed border-gray-400 bg-gray-50 flex flex-col items-center justify-center text-center cursor-pointer"
+      @click.stop="addBlockToColumn($event)"
+    >
+      <span class="text-xl font-bold text-gray-700"><SfIconAdd class="text-xl" /></span>
+      <p class="font-semibold text-gray-800">Add block</p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { SfIconAdd } from '@storefront-ui/vue';
+import type { EmptyGridBlockProps } from '~/components/blocks/structure/MultiGrid/types';
+
+const props = defineProps<EmptyGridBlockProps>();
+const { isEditMode } = useEditorState();
+const { insertColumnUuid } = useBlocksMutations();
+const { openAddBlockPopover, popoverState } = useAddBlockPopover();
+
+const isActiveColumn = computed(() => insertColumnUuid.value === props.meta.uuid);
+
+const isActiveColumnOpen = computed(() => !!(popoverState.value && isActiveColumn.value));
+
+const addBlockToColumn = (event: MouseEvent) => {
+  openAddBlockPopover({
+    anchorEl: event.currentTarget as HTMLElement,
+    targetUuid: props.meta.uuid,
+    position: 'inside',
+  });
+};
+</script>
+
+<i18n lang="json">
+{
+  "en": {
+    "placeholder": "Block will be placed here",
+    "choose": "Choose one from templates"
+  },
+  "de": {
+    "placeholder": "Block will be placed here",
+    "choose": "Choose one from templates"
+  }
+}
+</i18n>
